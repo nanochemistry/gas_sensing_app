@@ -1,4 +1,4 @@
-name: gas-sensing-app
+name: gas-sensing-env
 channels:
   - conda-forge
   - defaults
