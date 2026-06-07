@@ -1,0 +1,110 @@
+logging:
+  # 2.1 Continuous Experimental Data Logging (Always Active)
+  data_log:
+    folder: "data"
+    filename_prefix: "sensing_run"
+
+  # 2.2 System Console/Terminal Mirror Logging (Toggleable)
+  console_log:
+    enabled: true
+    folder: "logs"
+    filename_prefix: "log"
+  
+hardware:
+  keithley_2400:
+    description: "Main Sensor SMU"
+    port: "ASRL/dev/cu.usbserial-140::INSTR"
+    baud_rate: 9600
+    timeout: 5000          # Timeout in milliseconds for instrument communication
+    auto_range: true      # Set to true for auto-range, false for manual-range
+    manual_range: 20       # Range value in Ohms (e.g., 200kΩ). Ignored if auto_range is true.
+    four_wire: false       # Set to true for 4-wire measurement, false for 2-wire measurement
+
+
+  shutter:
+    description: "Light shutter for sensor illumination"
+    #port: "/dev/cu.usbmodem11301"
+    port: "/dev/cu.usbmodem1301"
+    baud_rate: 115200
+    open_angle: 150
+    closed_angle: 30
+
+  mfc_controller:
+    description: "AERA ROD-4 MFC controller"
+    port: "ASRL//dev/cu.usbserial-120::INSTR"
+    #port: "ASRL/dev/cu.usbserial-130::INSTR"
+    range_sccm:
+      1: 1000  # Air dry
+      2: 1000  # Air wet
+      3: 200   # NH4
+      4: 200   # H2
+    gases:
+      1: Air  # Air dry
+      2: Air  # Air wet
+      3: NH3  # NH3
+      4: H2   # H2
+
+gas:
+  Air:
+    name: "Synthetic air"
+    description: "Gas mixture of 20% oxygen and 80% nitrogen"
+    concentration: 200000 # ppm
+    vendor: "Air Products"
+    product_ID: "AIR-5.0"
+    cylinder_ID: "AIR-5.0"
+  NH4:
+    name: "Ammonia"
+    description: "Ammonia"
+    concentration: 100 # ppm
+    vendor: "Air Products"
+    product_ID: "NH4-1.0"
+    cylinder_ID: "NH4-1.0"
+  CO:
+    name: "Carbon monoxide"
+    description: "Carbon monoxide"
+    concentration: 1000 # ppm
+    vendor: "Air Products"
+    product_ID: "CO-1.0"
+    cylinder_ID: "CO-1.0"
+  NO2:
+    name: "Nitrogen dioxide"
+    description: "Nitrogen dioxide"
+    concentration: 20 # ppm
+    vendor: "Air Products"
+    product_ID: "NO2-1.0"
+    cylinder_ID: "NO2-1.0"
+  CH4:
+    name: "Methane"
+    description: "Methane"
+    concentration: 1000 # ppm
+    vendor: "Air Products"
+    product_ID: "CH4-1.0"
+    cylinder_ID: "CH4-1.0"
+  EtOH:
+    name: "Ethanol"
+    description: "Ethanol"
+    concentration: 1000 # ppm
+    vendor: "Air Products"
+    product_ID: "EtOH-1.0"
+    cylinder_ID: "EtOH-1.0"
+  H2:
+    name: "Hydrogen"
+    description: "Gas mixture of 5% hydrogen in nitrogen"
+    concentration: 50000 # ppm
+    vendor: "Air Products"
+    product_ID: "H2-1.0"
+    cylinder_ID: "H2-1.0"
+  O2:
+    name: "Oxygen"
+    description: ""
+    concentration: 1000000 # ppm
+    vendor: "Air Products"
+    product_ID: "O2-1.0"
+    cylinder_ID: "O2-1.0"
+  N2:
+    name: "Nitrogen"
+    description: "Nitrogen 5.0"
+    concentration: 1000000 # ppm
+    vendor: "Air Products"
+    product_ID: "N2-1.0"
+    cylinder_ID: "N2-1.0"

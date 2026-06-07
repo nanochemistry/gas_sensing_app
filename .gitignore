@@ -1,0 +1,15 @@
+# Ignore local physical hardware settings
+config.yaml
+
+# Ignore all generated lab results and console dumps
+data/
+logs/
+dummy_recipe.yaml
+
+# Ignore Python environment and cache artifacts
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+*.code-workspace
+.vscode
