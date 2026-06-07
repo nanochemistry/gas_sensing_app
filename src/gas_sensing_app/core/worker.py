@@ -4,41 +4,61 @@ import time
 import yaml
 import os
 import csv
-from PyQt6.QtCore import QThread, pyqtSignal
-from src.gas_sensing_app.hardware.Keithley_2400 import Keithley2400
-from src.gas_sensing_app.hardware.Shutter import ShutterController
-from src.gas_sensing_app.hardware.AERA_MFC import AeraMFCManager 
+from PyQt6.QtCore import QThread, pyqtSignal, QMutex
+
+from src.gas_sensing_app.hardware.keithley_2400 import Keithley2400
+from src.gas_sensing_app.hardware.shutter import ShutterController
+from src.gas_sensing_app.hardware.aera_mfc import AeraMFCManager 
  
 # ==============================================================================
 # II. BACKGROUND WORKER (Processes State-Based Instructions)
 # ==============================================================================
+# src/gas_sensing_app/core/worker.py
+import os
+
+
 class ExperimentWorker(QThread):
     data_sig = pyqtSignal(dict)      
     status_sig = pyqtSignal(str)    
     error_sig = pyqtSignal(str)     
     finished_sig = pyqtSignal(str)  
 
-    def __init__(self, config_path, recipe_path=None, mode='recipe'):
-        super().__init__()
-        self.config_path = config_path
-        self.recipe_path = recipe_path
-        self.mode = mode  
-        self.is_running = True
-        self.log_path = ""
+    def __init__(self, config_path=None, recipe_path=None, mode='recipe'):
         
-        # Thread-safe cross-talk properties
-        self.target_shutter_open = False  # Boolean state variable
-        self.target_flows = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
-        self.manual_update_pending = False
+        self.mutex = QMutex()
+        
+        super().__init__()
+        
+        # If no explicit absolute path is passed, calculate relative to this code file
+        if config_path is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            # Move up two levels: from core/ to gas_sensing_app/ to project_root/
+            self.config_path = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "config.yaml"))
+        else:
+            self.config_path = config_path
+            
+        # Do the same for the recipe file to prevent it from spawning randomly
+        if recipe_path is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            self.recipe_path = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "dummy_recipe.yaml"))
+        else:
+            self.recipe_path = recipe_path
 
     def update_manual_setpoints(self, shutter_open, flow_dict):
+        self.mutex.lock()
         self.target_shutter_open = shutter_open
-        self.target_flows = flow_dict
+        self.target_flows = flow_dict.copy()  # Create a decoupled snapshot copy
         self.manual_update_pending = True
+        self.mutex.unlock()
 
     def run(self):
         print(f"Starting Background Worker Thread [{self.mode.upper()} MODE]...")
         self.status_sig.emit("Initializing Hardware...")
+        
+        # Initialize references to None to avoid UnboundLocalErrors
+        meter = None
+        shutter = None
+        mfc = None
         
         try:
             with open(self.config_path, 'r') as f: config = yaml.safe_load(f)

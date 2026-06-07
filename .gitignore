@@ -5,6 +5,7 @@ config.yaml
 data/
 logs/
 dummy_recipe.yaml
+testing/
 
 # Ignore Python environment and cache artifacts
 .venv/

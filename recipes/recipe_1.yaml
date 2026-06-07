@@ -1,0 +1,32 @@
+# experiment_recipe.yaml
+metadata:
+  experiment_name: "H2_Sensitivity_Study"
+  sample_id: "SnO2_ThinFilm_01"
+
+steps:
+  - name: "Initial_Purge"
+    duration: 10           # Seconds
+    shutter_open: false     # Closed
+    mfc_flows:
+      1: 0               # N2 Carrier
+      2: 200             # H2
+      3: 0               # CH4
+      4: 0               # O2
+
+  - name: "Exposure_H2"
+    duration: 10
+    shutter_open: true     # Open
+    mfc_flows:
+      1: 0
+      2: 100                # 10 sccm H2
+      3: 100
+      4: 0
+
+  - name: "Recovery"
+    duration: 10
+    shutter_open: false      # Closed
+    mfc_flows:
+      1: 0
+      2: 200
+      3: 0
+      4: 0

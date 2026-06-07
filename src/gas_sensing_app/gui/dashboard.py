@@ -324,12 +324,40 @@ class GasSensingDashboard(QMainWindow):
         self.load_recipe_btn.setEnabled(True)
         print(f"Hardware loop cleanly halted. Session log saved to: {log_path}")
 
+    
     def closeEvent(self, event):
-        sys.stdout = sys.__stdout__; sys.stderr = sys.__stderr__
-        if self.log_file_obj: self.log_file_obj.close()
-        super().closeEvent(event)
+    #Intercepts window close to ensure background threads are safely killed.
+    if hasattr(self, 'worker') and self.worker.isRunning():
+        print("Application closing. Halting hardware worker thread cleanly...")
+        self.worker.is_running = False  # Signal thread loop to terminate
+        self.worker.wait()              # Block main thread until worker exits safely
+        
+    sys.stdout = sys.__stdout__
+    sys.stderr = sys.__stderr__
+    if self.log_file_obj:
+        self.log_file_obj.close()
+    event.accept()
+    
 
     def _create_dummy_files(self):
+        
+        # src/gas_sensing_app/gui/dashboard.py -> inside _create_dummy_files()
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Navigate up 3 levels from src/gas_sensing_app/gui/ to reach your repository root
+        root_dir = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
+
+        self.config_path = os.path.join(root_dir, "config.yaml")
+        self.recipe_path = os.path.join(root_dir, "recipes", "dummy_recipe.yaml")
+
+        os.makedirs(os.path.dirname(self.recipe_path), exist_ok=True)
+        
+        # src/gas_sensing_app/gui/dashboard.py -> inside _create_dummy_files()
+        self.config_path = "config.yaml"
+        self.recipe_path = os.path.join("recipes", "dummy_recipe.yaml")
+
+        # Explicitly ensure the storage paths exist first
+        os.makedirs("recipes", exist_ok=True)
+    
         if not os.path.exists(self.config_path):
             config = {
                 'hardware': {

@@ -1,0 +1,16 @@
+# This is a comment in a TOML file
+
+[project]
+name = "gas_sensing_app"
+version = "2026.1.0"
+description = "Scientific hardware control and GUI app for gas sensing setup"
+authors = [ { name = "Thomas Fischer", email = "t.fischer@uni-koeln.de" } ]
+dependencies = [
+    "PyQt6>=6.4.0",
+    "pyqtgraph>=0.13.0",
+    "PyYAML>=6.0"
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']

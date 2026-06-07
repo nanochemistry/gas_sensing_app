@@ -1,3 +1,5 @@
+# src/gas_sensing_app/hardware/shutter.py
+
 import serial
 import time
 
