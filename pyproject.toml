@@ -9,7 +9,7 @@ description = "A modular multi-threaded GUI application for laboratory gas sensi
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
-    { name = "Thomas Fischer", email = "fischet0@uni-koeln.de" }
+    { name = "Thomas Fischer", email = "t.fischer@uni-koeln.de" }
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -25,11 +25,13 @@ dependencies = [
     "pyserial",
     "pymeasure",
     "pyvisa-py",
+    "zeroconf",
+    "psutil",
 ]
 
 # This registers the application so you can run it globally via terminal command
 [project.scripts]
-gas-app = "gas_sensing_app.gui.dashboard:main"
+sensor = "gas_sensing_app.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

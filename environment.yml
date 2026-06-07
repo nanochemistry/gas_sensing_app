@@ -12,6 +12,8 @@ dependencies:
   - pyserial
   - pymeasure
   - pyvisa-py
+  - zeroconf
+  - psutil
   # This block tells Conda to hand the final local installation over to pip
   - pip:
     - -e .

@@ -5,7 +5,8 @@ import time
 
 class Keithley2400:
     def __init__(self, resource_string):
-        self.rm = pyvisa.ResourceManager()
+        #self.rm = pyvisa.ResourceManager()
+        self.rm = pyvisa.ResourceManager('@py')
         self.inst = self.rm.open_resource(resource_string)
         self.inst.baud_rate = 9600
         self.inst.read_termination = '\r'

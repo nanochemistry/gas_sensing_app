@@ -1,2 +1,2 @@
 [console_scripts]
-gas-app = gas_sensing_app.gui.dashboard:main
+sensor = gas_sensing_app.__main__:main

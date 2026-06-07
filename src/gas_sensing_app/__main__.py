@@ -9,8 +9,6 @@ from PyQt6.QtGui import QIcon
 # Absolute application package calls
 from gas_sensing_app.gui.dashboard import GasSensingDashboard
 
-
-
 def main():
     # --- WINDOWS TASKBAR FIX ---
     import os

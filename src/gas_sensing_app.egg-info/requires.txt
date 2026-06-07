@@ -4,3 +4,4 @@ pyqtgraph>=0.13.0
 pyvisa
 pyserial
 pymeasure
+pyvisa-py
