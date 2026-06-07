@@ -1,16 +1,35 @@
-# This is a comment in a TOML file
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "gas_sensing_app"
-version = "2026.1.0"
-description = "Scientific hardware control and GUI app for gas sensing setup"
-authors = [ { name = "Thomas Fischer", email = "t.fischer@uni-koeln.de" } ]
-dependencies = [
-    "PyQt6>=6.4.0",
-    "pyqtgraph>=0.13.0",
-    "PyYAML>=6.0"
+version = "0.1.0"
+description = "A modular multi-threaded GUI application for laboratory gas sensing and instrument control"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Thomas Fischer", email = "fischet0@uni-koeln.de" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
 ]
 
-[tool.black]
-line-length = 88
-target-version = ['py311']
+# Core external dependencies used across your core/gui/hardware modules
+dependencies = [
+    "PyQt6>=6.4.0",
+    "PyYAML>=6.0",
+    "pyqtgraph>=0.13.0",
+    "pyvisa",
+    "pyserial",
+    "pymeasure",
+    "pyvisa-py",
+]
+
+# This registers the application so you can run it globally via terminal command
+[project.scripts]
+gas-app = "gas_sensing_app.gui.dashboard:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

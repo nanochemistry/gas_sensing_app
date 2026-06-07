@@ -6,10 +6,12 @@ import os
 import csv
 from PyQt6.QtCore import QThread, pyqtSignal, QMutex
 
-from src.gas_sensing_app.hardware.keithley_2400 import Keithley2400
-from src.gas_sensing_app.hardware.shutter import ShutterController
-from src.gas_sensing_app.hardware.aera_mfc import AeraMFCManager 
+#from src.gas_sensing_app.hardware.keithley_2400 import Keithley2400
+#from src.gas_sensing_app.hardware.shutter import ShutterController
+#from src.gas_sensing_app.hardware.aera_mfc import AeraMFCManager 
  
+from gas_sensing_app.hardware import Keithley2400, ShutterController, AeraMFCManager
+
 # ==============================================================================
 # II. BACKGROUND WORKER (Processes State-Based Instructions)
 # ==============================================================================
@@ -26,8 +28,13 @@ class ExperimentWorker(QThread):
     def __init__(self, config_path=None, recipe_path=None, mode='recipe'):
         
         self.mutex = QMutex()
-        
         super().__init__()
+        
+        # 1. FIX: Save the incoming mode parameter so line 55 can read it!
+        self.mode = mode
+        
+        # 2. FIX: Initialize this flag so your step loop doesn't crash on 'self.is_running'
+        self.is_running = True
         
         # If no explicit absolute path is passed, calculate relative to this code file
         if config_path is None:
@@ -99,24 +106,34 @@ class ExperimentWorker(QThread):
                 four_wire=k2400_cfg.get('four_wire', False)
             )
             shutter.set_open(False) # Start safely closed
-
+            
+            experiment_start = time.time() # Capture the absolute start time of the experiment sequence
             with open(self.log_path, 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
-                headers = ["Timestamp", "Mode_Step", "Tick", "Resistance", "MFC1", "MFC2", "MFC3", "MFC4", "Shutter_Open"]
+                headers = ["Timestamp", "Elapsed_Seconds", "Mode_Step", "Tick", "Resistance", "MFC1", "MFC2", "MFC3", "MFC4", "Shutter_Open"]
                 writer.writerow(headers)
 
+                
                 # ----------------- MODE A: AUTOMATED RECIPE -----------------
                 if self.mode == 'recipe':
                     for step in recipe['steps']:
-                        if not self.is_running: break
-                        
-                        # Extract the step boolean parameter (fallback to False if missing)
+                        if not self.is_running:
+                            break
+        
                         is_open = bool(step.get('shutter_open', False))
                         print(f"Transitioning to Phase Step: {step['name']}")
                         shutter.set_open(is_open)
-                        
-                        for ch_idx, flow in step.get('mfc_flows', {}).items():
-                            mfc.set_flow(int(ch_idx), flow)
+        
+                        # 1. Extract raw flows dict
+                        raw_flows = step.get('mfc_flows', {})
+        
+                        # 2. Defensively normalize all keys to integers to handle user string inputs
+                        normalized_flows = {int(k): float(v) for k, v in raw_flows.items()}
+        
+                        # 3. Explicitly loop through all 4 hardware channels to prevent sticky flows
+                        for ch in [1, 2, 3, 4]:
+                            target_flow = normalized_flows.get(ch, 0.0)  # Safe fallback to 0.0 if omitted
+                            mfc.set_flow(ch, target_flow)
                         
                         self.status_sig.emit(f"Step: {step['name']} ({step['duration']}s)")
 
@@ -128,8 +145,10 @@ class ExperimentWorker(QThread):
                             f1, f2 = mfc.get_actual_flow(1), mfc.get_actual_flow(2)
                             f3, f4 = mfc.get_actual_flow(3), mfc.get_actual_flow(4)
                             
-                            curr_time = time.strftime("%H:%M:%S")
-                            row = [curr_time, step['name'], second + 1, res, f1, f2, f3, f4, int(is_open)]
+                            curr_time = time.strftime("%Y-%m-%d %H:%M:%S") # Full calendar date + time format
+                            elapsed_seconds = int(time.time() - experiment_start) # Calculate exact seconds elapsed from the start
+                            
+                            row = [curr_time, elapsed_seconds, step['name'], second + 1, res, f1, f2, f3, f4, int(is_open)]
                             writer.writerow(row)
                             csvfile.flush() 
 
@@ -155,9 +174,11 @@ class ExperimentWorker(QThread):
                         res = meter.get_reading()
                         f1, f2 = mfc.get_actual_flow(1), mfc.get_actual_flow(2)
                         f3, f4 = mfc.get_actual_flow(3), mfc.get_actual_flow(4)
-                        
-                        curr_time = time.strftime("%H:%M:%S")
-                        row = [curr_time, "MANUAL", tick, res, f1, f2, f3, f4, int(self.target_shutter_open)]
+
+                        curr_time = time.strftime("%Y-%m-%d %H:%M:%S") # Full calendar date + time format
+                        elapsed_seconds = int(time.time() - experiment_start) # Calculate exact seconds elapsed from the start
+
+                        row = [curr_time, elapsed_seconds, "MANUAL", tick, res, f1, f2, f3, f4, int(self.target_shutter_open)]
                         writer.writerow(row)
                         csvfile.flush()
 

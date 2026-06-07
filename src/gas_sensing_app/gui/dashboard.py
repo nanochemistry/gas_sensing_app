@@ -11,7 +11,8 @@ from PyQt6.QtWidgets import (QMainWindow,
                              QHBoxLayout, 
                              QLabel, 
                              QPushButton, 
-                             QTabWidget, 
+                             QTabWidget,
+                             QTextEdit, 
                              QFileDialog, 
                              QSpinBox, 
                              QCheckBox, 
@@ -19,6 +20,7 @@ from PyQt6.QtWidgets import (QMainWindow,
                              QGridLayout, 
                              QFrame, 
                              QSplitter)
+
 from PyQt6.QtGui import QFontDatabase, QIcon
 from PyQt6.QtCore import Qt, QTimer
 import pyqtgraph as pg
@@ -157,6 +159,7 @@ class GasSensingDashboard(QMainWindow):
         self.res_plot = pg.PlotWidget(title="1. Sensor Resistance Data Loop (R vs. t)")
         self.res_plot.showGrid(x=True, y=True)
         self.res_curve = self.res_plot.plot(pen=pg.mkPen(color='#3498db', width=2))
+        self.res_plot.getAxis('bottom').setStyle(showValues=False)
         graph_splitter.addWidget(self.res_plot)
 
         mfc_container = QWidget()
@@ -165,8 +168,8 @@ class GasSensingDashboard(QMainWindow):
 
         self.mfc_plot = pg.PlotWidget(title="2. MFC Gas Flows & Shutter Profiles")
         self.mfc_plot.showGrid(x=True, y=True)
-        self.mfc_plot.setLabel('left', 'Gas Flow Speed', units='sccm')
-        self.mfc_plot.setLabel('bottom', 'Elapsed Timeline Counter', units='s')
+        self.mfc_plot.setLabel('left', 'Gas Flow', units='sccm')
+        self.mfc_plot.setLabel('bottom', 'Elapsed Time', units='s')
         
         self.res_plot.setXLink(self.mfc_plot)
         
@@ -327,18 +330,17 @@ class GasSensingDashboard(QMainWindow):
     
     def closeEvent(self, event):
     #Intercepts window close to ensure background threads are safely killed.
-    if hasattr(self, 'worker') and self.worker.isRunning():
-        print("Application closing. Halting hardware worker thread cleanly...")
-        self.worker.is_running = False  # Signal thread loop to terminate
-        self.worker.wait()              # Block main thread until worker exits safely
+        if hasattr(self, 'worker') and self.worker.isRunning():
+            print("Application closing. Halting hardware worker thread cleanly...")
+            self.worker.is_running = False  # Signal thread loop to terminate
+            self.worker.wait()              # Block main thread until worker exits safely
         
-    sys.stdout = sys.__stdout__
-    sys.stderr = sys.__stderr__
-    if self.log_file_obj:
-        self.log_file_obj.close()
-    event.accept()
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        if self.log_file_obj:
+            self.log_file_obj.close()
+        event.accept()
     
-
     def _create_dummy_files(self):
         
         # src/gas_sensing_app/gui/dashboard.py -> inside _create_dummy_files()

@@ -4,9 +4,11 @@ REPOSITORY STRUCTURE
 
 gas-sensing-app/
     config.template.yaml
+    environment.yml
     pyproject.toml
     config.yaml
     main.py
+    dummy_recipe.yaml
     tests/
     logs/
     recipes/
@@ -14,8 +16,8 @@ gas-sensing-app/
         dummy_recipe.yaml
     .vscode/
     data/
-    assets/
     src/
+        gas_sensing_app.egg-info/
         gas_sensing_app/
             __init__.py
             __main__.py
@@ -31,6 +33,7 @@ gas-sensing-app/
                 logger.py
             gui/
                 dashboard.py
+            assets/
 
 ==================================================
 FILE CONTENTS
@@ -150,23 +153,60 @@ gas:
 
 --- END OF FILE: config.template.yaml ---
 
+--- START OF FILE: environment.yml ---
+name: gas-sensing-app
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pyyaml>=6.0
+  - pyqt6>=6.4.0
+  - pyqtgraph>=0.13.0
+  - pyvisa
+  - pyserial
+  - pymeasure
+  # This block tells Conda to hand the final local installation over to pip
+  - pip:
+    - -e .
+--- END OF FILE: environment.yml ---
+
 --- START OF FILE: pyproject.toml ---
-# This is a comment in a TOML file
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "gas_sensing_app"
-version = "2026.1.0"
-description = "Scientific hardware control and GUI app for gas sensing setup"
-authors = [ { name = "Thomas Fischer", email = "t.fischer@uni-koeln.de" } ]
-dependencies = [
-    "PyQt6>=6.4.0",
-    "pyqtgraph>=0.13.0",
-    "PyYAML>=6.0"
+version = "0.1.0"
+description = "A modular multi-threaded GUI application for laboratory gas sensing and instrument control"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Thomas Fischer", email = "fischet0@uni-koeln.de" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
 ]
 
-[tool.black]
-line-length = 88
-target-version = ['py311']
+# Core external dependencies used across your core/gui/hardware modules
+dependencies = [
+    "PyQt6>=6.4.0",
+    "PyYAML>=6.0",
+    "pyqtgraph>=0.13.0",
+    "pyvisa",
+    "pyserial",
+    "pymeasure",
+]
+
+# This registers the application so you can run it globally via terminal command
+[project.scripts]
+gas-app = "gas_sensing_app.gui.dashboard:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 --- END OF FILE: pyproject.toml ---
 
 --- START OF FILE: config.yaml ---
@@ -193,7 +233,6 @@ hardware:
     auto_range: true      # Set to true for auto-range, false for manual-range
     manual_range: 20       # Range value in Ohms (e.g., 200kΩ). Ignored if auto_range is true.
     four_wire: false       # Set to true for 4-wire measurement, false for 2-wire measurement
-
 
   shutter:
     description: "Light shutter for sensor illumination"
@@ -293,11 +332,35 @@ import os
 # Insert the local src directory into python's runtime path mapping list
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from gas_sensing_app.gui.dashboard import main
+# CHANGED: Import main from the __main__.py submodule layout instead of dashboard.py
+from gas_sensing_app.__main__ import main
 
 if __name__ == "__main__":
     main()
 --- END OF FILE: main.py ---
+
+--- START OF FILE: dummy_recipe.yaml ---
+steps:
+- duration: 4
+  mfc_flows:
+    1: 120
+    2: 10
+  name: Purge_Phase
+  shutter_open: false
+- duration: 6
+  mfc_flows:
+    1: 50
+    3: 180
+  name: Expose_Gas
+  shutter_open: true
+- duration: 4
+  mfc_flows:
+    1: 120
+    2: 10
+  name: Recovery_Phase
+  shutter_open: false
+
+--- END OF FILE: dummy_recipe.yaml ---
 
 --- START OF FILE: recipes/recipe_1.yaml ---
 # experiment_recipe.yaml
@@ -372,11 +435,14 @@ steps:
 
 import sys
 import os
+from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 
 # Absolute application package calls
 from gas_sensing_app.gui.dashboard import GasSensingDashboard
+
+
 
 def main():
     # --- WINDOWS TASKBAR FIX ---
@@ -389,10 +455,9 @@ def main():
 
     app = QApplication(sys.argv)
     
-    # === MAC & GLOBAL DOCK ICON FIX ===
-    # This forces macOS to map the graphic directly to the running Dock process
-    app.setWindowIcon(QIcon("../assets/sensor_icon.png")) 
-    # ==================================
+    SCRIPT_DIR = Path(__file__).resolve().parent # Get the absolute path of the directory containing THIS script file
+    ICON_PATH = SCRIPT_DIR / "assets" / "sensor_icon.png"  # Build the exact path to the icon folder
+    app.setWindowIcon(QIcon(str(ICON_PATH))) # Load the icon cleanly
 
     window = GasSensingDashboard()
     window.show()
@@ -862,18 +927,27 @@ class ExperimentWorker(QThread):
                 headers = ["Timestamp", "Mode_Step", "Tick", "Resistance", "MFC1", "MFC2", "MFC3", "MFC4", "Shutter_Open"]
                 writer.writerow(headers)
 
+                
                 # ----------------- MODE A: AUTOMATED RECIPE -----------------
                 if self.mode == 'recipe':
                     for step in recipe['steps']:
-                        if not self.is_running: break
-                        
-                        # Extract the step boolean parameter (fallback to False if missing)
+                        if not self.is_running:
+                            break
+        
                         is_open = bool(step.get('shutter_open', False))
                         print(f"Transitioning to Phase Step: {step['name']}")
                         shutter.set_open(is_open)
-                        
-                        for ch_idx, flow in step.get('mfc_flows', {}).items():
-                            mfc.set_flow(int(ch_idx), flow)
+        
+                        # 1. Extract raw flows dict
+                        raw_flows = step.get('mfc_flows', {})
+        
+                        # 2. Defensively normalize all keys to integers to handle user string inputs
+                        normalized_flows = {int(k): float(v) for k, v in raw_flows.items()}
+        
+                        # 3. Explicitly loop through all 4 hardware channels to prevent sticky flows
+                        for ch in [1, 2, 3, 4]:
+                            target_flow = normalized_flows.get(ch, 0.0)  # Safe fallback to 0.0 if omitted
+                            mfc.set_flow(ch, target_flow)
                         
                         self.status_sig.emit(f"Step: {step['name']} ({step['duration']}s)")
 
@@ -989,7 +1063,8 @@ from PyQt6.QtWidgets import (QMainWindow,
                              QHBoxLayout, 
                              QLabel, 
                              QPushButton, 
-                             QTabWidget, 
+                             QTabWidget,
+                             QTextEdit, 
                              QFileDialog, 
                              QSpinBox, 
                              QCheckBox, 
@@ -997,6 +1072,7 @@ from PyQt6.QtWidgets import (QMainWindow,
                              QGridLayout, 
                              QFrame, 
                              QSplitter)
+
 from PyQt6.QtGui import QFontDatabase, QIcon
 from PyQt6.QtCore import Qt, QTimer
 import pyqtgraph as pg
@@ -1305,18 +1381,17 @@ class GasSensingDashboard(QMainWindow):
     
     def closeEvent(self, event):
     #Intercepts window close to ensure background threads are safely killed.
-    if hasattr(self, 'worker') and self.worker.isRunning():
-        print("Application closing. Halting hardware worker thread cleanly...")
-        self.worker.is_running = False  # Signal thread loop to terminate
-        self.worker.wait()              # Block main thread until worker exits safely
+        if hasattr(self, 'worker') and self.worker.isRunning():
+            print("Application closing. Halting hardware worker thread cleanly...")
+            self.worker.is_running = False  # Signal thread loop to terminate
+            self.worker.wait()              # Block main thread until worker exits safely
         
-    sys.stdout = sys.__stdout__
-    sys.stderr = sys.__stderr__
-    if self.log_file_obj:
-        self.log_file_obj.close()
-    event.accept()
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        if self.log_file_obj:
+            self.log_file_obj.close()
+        event.accept()
     
-
     def _create_dummy_files(self):
         
         # src/gas_sensing_app/gui/dashboard.py -> inside _create_dummy_files()
