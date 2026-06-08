@@ -6,6 +6,8 @@ venv/
 *.egg-info/
 .vscode/
 
+.DS_Store
+
 # Python caching
 __pycache__/
 *.pyc
@@ -15,3 +17,4 @@ data/
 logs/
 recipes/
 config.yaml
+repo_dump.txt

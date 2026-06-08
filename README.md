@@ -1,6 +1,8 @@
 # Gas Sensing App
 The Gas Sensing App is a GUI to control the gas sensing experiment at the Chair of Inorganic and Materials Chemistry at the University of Cologne, Germany (https://nanochemistry.uni-koeln.de)
 
+This GUI was created using Google Gemini 3.5 Flash.
+
 ## Hardware components
 ### Mass flow controllers (MFC)
 Aera MFC controllers

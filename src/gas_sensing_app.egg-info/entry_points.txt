@@ -1,2 +1,0 @@
-[console_scripts]
-sensor = gas_sensing_app.__main__:main
