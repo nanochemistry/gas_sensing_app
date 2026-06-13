@@ -76,6 +76,10 @@ cd ~/Documents
 git clone https://github.com/nanochemistry/gas-sensing-app.git
 cd gas-sensing-app
 ```
+### Add folders in gas-sensing-app
+- add folder **data** for measurement data 
+- add folder **logs**
+- add folder **recipes**
 
 ### Create and activate the Python environment
 ```console

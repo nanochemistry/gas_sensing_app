@@ -1,12 +1,28 @@
-# main.py (At your repository root folder)
 import sys
 import os
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QIcon
+from gas_sensing_app.gui.dashboard import GasSensingDashboard
 
-# Insert the local src directory into python's runtime path mapping list
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+def main():
+    # Windows Taskbar unique identification assignment
+    if os.name == 'nt':
+        import ctypes
+        app_id = "nanochemistry.gassensing.dashboard.2026"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
 
-# CHANGED: Import main from the __main__.py submodule layout instead of dashboard.py
-from gas_sensing_app.__main__ import main
+    app = QApplication(sys.argv)
+    
+    # Configure application metadata globally across window systems
+    app.setApplicationName("Gas Sensing Dashboard")
+    app.setApplicationDisplayName("Gas Sensing Dashboard")
+    
+    # Assign the master runtime icon to the global application process
+    app.setWindowIcon(QIcon("assets/sensor_icon.png"))
+
+    window = GasSensingDashboard()
+    window.show()
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()

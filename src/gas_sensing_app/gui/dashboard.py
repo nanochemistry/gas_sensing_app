@@ -5,6 +5,10 @@ import os
 import time
 import yaml
 import queue
+
+import shutil
+from pathlib import Path
+
 from PyQt6.QtWidgets import (QMainWindow, 
                              QWidget, 
                              QVBoxLayout,
@@ -41,7 +45,7 @@ class GasSensingDashboard(QMainWindow):
         self.setWindowIcon(QIcon("assets/sensor_icon.png")) # icon path (ensure you have an appropriate icon file in the assets folder)
         
         self.system_mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont).family() # Programmatically get 'Consolas' on Win, 'Menlo' on Mac, 'DejaVu' on Linux
-
+        
         self.config_path = "config.yaml" 
         self.recipe_path = None
         self.log_file_obj = None  
@@ -70,7 +74,13 @@ class GasSensingDashboard(QMainWindow):
         self.res_display = QLabel("--- Ω")
         
         # Resistance Display
-        self.res_display.setStyleSheet(f"font-size: 32px; font-family: '{self.system_mono}'; color: #2c3e50; border: 2px solid #bdc3c7; padding: 10px; background: white;")
+        self.res_display.setStyleSheet(f"""font-size: 32px;
+                                       font-family: '{self.system_mono}';
+                                       color: #2c3e50;
+                                       border: 2px solid #bdc3c7;
+                                       padding: 10px;
+                                       background: white;""")
+
         self.res_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         res_indicator_layout.addWidget(self.res_display)
 
@@ -139,7 +149,13 @@ class GasSensingDashboard(QMainWindow):
         # Live System Console Log 
         self.console_display = QTextEdit()
         self.console_display.setReadOnly(True)
-        self.console_display.setStyleSheet(f"background-color: #1e1e1e; color: #64e314; font-family: '{self.system_mono}'; font-size: 11px;")
+        
+        self.console_display.setStyleSheet(
+            f"""background-color: #1e1e1e;
+            color: #64e314; 
+            font-family: '{self.system_mono}';
+            font-size: 11px;
+            """)        
         console_layout.addWidget(self.console_display)
 
         self.control_tabs.addTab(recipe_tab, "Automated Recipe")
@@ -342,46 +358,67 @@ class GasSensingDashboard(QMainWindow):
         event.accept()
     
     def _create_dummy_files(self):
+        """
+        Ensures the local lab computer runtime workspace folders and files exist.
+        Copies raw templates from the assets folder to preserve structural comments.
+        """
+        # Define paths cleanly using pathlib
+        template_config = Path("assets/config.template.yaml")
+        template_recipe = Path("assets/recipe.template.yaml")
         
-        # src/gas_sensing_app/gui/dashboard.py -> inside _create_dummy_files()
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        # Navigate up 3 levels from src/gas_sensing_app/gui/ to reach your repository root
-        root_dir = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
-
-        self.config_path = os.path.join(root_dir, "config.yaml")
-        self.recipe_path = os.path.join(root_dir, "recipes", "dummy_recipe.yaml")
-
-        os.makedirs(os.path.dirname(self.recipe_path), exist_ok=True)
-        
-        # src/gas_sensing_app/gui/dashboard.py -> inside _create_dummy_files()
-        self.config_path = "config.yaml"
-        self.recipe_path = os.path.join("recipes", "dummy_recipe.yaml")
-
-        # Explicitly ensure the storage paths exist first
-        os.makedirs("recipes", exist_ok=True)
-    
+        # 1. Check and copy live config.yaml fallback
         if not os.path.exists(self.config_path):
-            config = {
-                'hardware': {
-                    'keithley_2400': {'port': 'MOCK_PORT', 'auto_range': False, 'manual_range': 200000, 'four_wire': True},
-                    'shutter': {'port': 'MOCK_SHUTTER', 'baud_rate': 115200, 'open_angle': 90, 'closed_angle': 0},
-                    'mfc_controller': {'port': 'MOCK_MFC', 'range_sccm': {1: 1000, 2: 1000, 3: 200, 4: 200}}
-                },
-                'logging': {
-                    'data_log': {'folder': 'data', 'filename_prefix': 'gas_experiment'},
-                    'console_log': {'enabled': True, 'folder': 'console_logs', 'filename_prefix': 'system_console'}
+            if template_config.exists():
+                shutil.copy(template_config, self.config_path)
+                print("[System Info] Generated local 'config.yaml' from master assets template.")
+            else:
+                # Critical safety net fallback if assets folder is completely missing
+                print("[Critical Warning] 'assets/config.template.yaml' not found! Falling back to safe hardcoded defaults.")
+                fallback_config = {
+                    'hardware': {
+                        'keithley_2400': {'port': 'MOCK_PORT', 'auto_range': False, 'manual_range': 200000, 'four_wire': True},
+                        'shutter': {'port': 'MOCK_SHUTTER', 'baud_rate': 115200, 'open_angle': 90, 'closed_angle': 0},
+                        'mfc_controller': {'port': 'MOCK_MFC', 'range_sccm': {1: 1000, 2: 1000, 3: 200, 4: 200}}
+                    },
+                    'logging': {
+                        'data_log': {'folder': 'data', 'filename_prefix': 'sensing_run'},
+                        'console_log': {'enabled': True, 'folder': 'logs', 'filename_prefix': 'log'}
+                    }
                 }
-            }
-            with open(self.config_path, 'w') as f: yaml.dump(config, f)
+                with open(self.config_path, 'w') as f:
+                    yaml.dump(fallback_config, f)
 
-        # CHANGED: The automatically generated mock recipe file now tracks state parameters cleanly!
-        self.recipe_path = "dummy_recipe.yaml"
+        # 2. Extract operational workspace directories dynamically from config.yaml
+        try:
+            with open(self.config_path, 'r') as f:
+                cfg = yaml.safe_load(f) or {}
+        except Exception as e:
+            print(f"[Error] Failed to read config.yaml layout: {e}")
+            cfg = {}
+
+        # Safely fall back to default string folders if parameters are missing inside config.yaml
+        data_dir = cfg.get('logging', {}).get('data_log', {}).get('folder', 'data')
+        log_dir = cfg.get('logging', {}).get('console_log', {}).get('folder', 'logs')
+        recipe_dir = "recipes"
+
+        # 3. Create all dynamic storage directories safely (skips if they already exist)
+        for folder in [data_dir, log_dir, recipe_dir]:
+            Path(folder).mkdir(parents=True, exist_ok=True)
+
+        # 4. Seed the user recipes workspace folder with a base profile if it is empty
+        self.recipe_path = os.path.join(recipe_dir, "dummy_recipe.yaml")
         if not os.path.exists(self.recipe_path):
-            recipe = {
-                'steps': [
-                    {'name': 'Purge_Phase', 'duration': 4, 'shutter_open': False, 'mfc_flows': {1: 120, 2: 10}},
-                    {'name': 'Expose_Gas', 'duration': 6, 'shutter_open': True, 'mfc_flows': {1: 50, 3: 180}},
-                    {'name': 'Recovery_Phase', 'duration': 4, 'shutter_open': False, 'mfc_flows': {1: 120, 2: 10}}
-                ]
-            }
-            with open(self.recipe_path, 'w') as f: yaml.dump(recipe, f)
+            if template_recipe.exists():
+                shutil.copy(template_recipe, self.recipe_path)
+                print(f"[System Info] Seeded recipes workspace with: {os.path.basename(self.recipe_path)}")
+            else:
+                # Quick programmatic fallback array if the assets/ recipe template is missing
+                fallback_recipe = {
+                    'steps': [
+                        {'name': 'Purge_Phase', 'duration': 10, 'shutter_open': False, 'mfc_flows': {1: 120, 2: 10}},
+                        {'name': 'Expose_Gas', 'duration': 20, 'shutter_open': True, 'mfc_flows': {1: 100, 2: 30}},
+                        {'name': 'Recovery_Phase', 'duration': 15, 'shutter_open': False, 'mfc_flows': {1: 120, 2: 10}}
+                    ]
+                }
+                with open(self.recipe_path, 'w') as f:
+                    yaml.dump(fallback_recipe, f)
