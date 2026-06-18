@@ -193,9 +193,39 @@ class ExperimentWorker(QThread):
         finally:
             print("Cleaning up resources, moving hardware to safe state.")
             self.status_sig.emit("Finished / Safe State.")
-            mfc.stop_all()
-            shutter.set_open(False)
-            meter.close()
-            mfc.close()
-            shutter.close()
+            
+            # 1. Safely stop the MFCs independently
+            if mfc:
+                try:
+                    mfc.stop_all()
+                except Exception as e:
+                    print(f"[CLEANUP WARNING] Could not zero MFCs (Device likely offline): {e}")
+            
+            # 2. Safely close the physical shutter door
+            if shutter:
+                try:
+                    shutter.set_open(False)
+                except Exception as e:
+                    print(f"[CLEANUP WARNING] Could not command shutter to close: {e}")
+            
+            # 3. Defensively disengage Keithley sourcing power
+            if meter:
+                try:
+                    meter.close()
+                except Exception as e:
+                    print(f"[CLEANUP WARNING] Could not disable Keithley output: {e}")
+                    
+            # 4. Close low-level communication handles cleanly
+            if mfc:
+                try:
+                    mfc.close()
+                except Exception as e:
+                    pass
+                    
+            if shutter:
+                try:
+                    shutter.close()
+                except Exception as e:
+                    pass
+            
             self.finished_sig.emit(self.log_path)

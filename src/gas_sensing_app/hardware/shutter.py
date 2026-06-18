@@ -4,10 +4,15 @@ import serial
 import time
 
 class ShutterController:
-    def __init__(self, port='/dev/cu.usbmodem11301', baudrate=115200):
+    def __init__(self, port='/dev/cu.usbmodem11301', baudrate=115200, open_angle=90, closed_angle=0):
         self.ser = serial.Serial(port, baudrate, timeout=1)
         time.sleep(2)  # Critical: Wait for Arduino to reboot after serial opening
-        print(f"Shutter Controller Connected at {port} with baudrate {baudrate}.")
+        
+        # Save custom calibration bounds from configuration
+        self.open_angle = open_angle
+        self.closed_angle = closed_angle
+        
+        print(f"Shutter Controller Connected at {port} with baudrate {baudrate} (Open: {open_angle}°, Closed: {closed_angle}°).")
 
     def _send_command(self, cmd_char, value_str):
         """Internal helper to format and send: <C###>"""
@@ -35,23 +40,47 @@ class ShutterController:
         """Queries current position: <GPOS>"""
         return self._send_command('G', 'POS')
     
+    def set_open(self, should_open: bool):
+        """Bridges API alignment with worker thread state cycles."""
+        angle = self.open_angle if should_open else self.closed_angle
+        self.set_position(angle)
+    
     def shutter_open(self):
-        self.set_position(150)  # Example: 150 degrees = fully open
+        self.set_position(self.open_angle)
     
     def shutter_close(self):
-        self.set_position(40)  # Example: 40 degrees = fully closed
+        self.set_position(self.closed_angle)
 
     def close(self):
         self.ser.close()
 
 # --- Manual Test ---
 if __name__ == "__main__":
-    shutter = ShutterController()
-    shutter.set_speed(0)
-    shutter.shutter_open()
-    print(f"Current Shutter Position: {shutter.get_position()}")
-    time.sleep(2)
-    shutter.shutter_close()
-    print(f"Current Shutter Position: {shutter.get_position()}")
-    #print(f"Closing Shutter: {shutter.set_position(40)}")
-    shutter.close()
+    # Force it to use your active Mac port and configuration angles
+    shutter = ShutterController(
+        port='/dev/cu.usbmodem1201', 
+        baudrate=115200, 
+        open_angle=50, 
+        closed_angle=60
+    )
+    
+    print("Starting shutter isolation stress test...")
+    shutter.set_speed(0) # Instant movement
+    
+    try:
+        for i in range(5):
+            print(f"Cycle {i+1}: Opening Shutter...")
+            shutter.set_open(True)
+            time.sleep(1.5)
+            
+            print(f"Cycle {i+1}: Closing Shutter...")
+            shutter.set_open(False)
+            time.sleep(1.5)
+            
+        print("Stress test completed successfully without disconnections!")
+        
+    except Exception as e:
+        print(f"\n[CRASH DETECTED]: The hardware layer threw an error: {e}")
+        
+    finally:
+        shutter.close()
