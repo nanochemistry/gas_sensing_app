@@ -4,7 +4,7 @@ import os
 EXCLUDE_DIRS = {'.git', '__pycache__', '.venv', 'venv', 'build', 'dist', '.pytest_cache'}
 EXCLUDE_FILES = {'bundle.py', 'repo_dump.txt'}
 # Only extract text-based code/config files
-ALLOWED_EXTENSIONS = {'.py', '.yaml', '.yml', '.toml', '.ini'}
+ALLOWED_EXTENSIONS = {'.py', '.yaml', '.yml', '.toml', '.ini','.qss', '.txt', '.md'}
 
 def generate_repo_dump(root_dir, output_file):
     with open(output_file, 'w', encoding='utf-8') as out:

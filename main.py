@@ -4,22 +4,30 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 from gas_sensing_app.gui.dashboard import GasSensingDashboard
 
-def main():
-    # Windows Taskbar unique identification assignment
-    if os.name == 'nt':
-        import ctypes
-        app_id = "nanochemistry.gassensing.dashboard.2026"
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+import os
+import sys
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QIcon
+from src.gas_sensing_app.gui.dashboard import GasSensingDashboard
 
+def main():
     app = QApplication(sys.argv)
     
-    # Configure application metadata globally across window systems
-    app.setApplicationName("Gas Sensing Dashboard")
+    # 1. Define explicit app signatures (Critical for Linux taskbar linking)
+    app.setApplicationName("GasSensingApp")
     app.setApplicationDisplayName("Gas Sensing Dashboard")
+    app.setDesktopFileName("Gas_Sensing_App.desktop")
     
-    # Assign the master runtime icon to the global application process
-    app.setWindowIcon(QIcon("assets/sensor_icon.png"))
-
+    # 2. Resolve path to the icon relative to main.py
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    icon_path = os.path.join(root_dir, "src", "gas_sensing_app", "assets", "icon.png")
+    
+    # 3. Apply the icon to the entire OS process hierarchy
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
+    else:
+        print(f"[WARNING]: Global icon asset not found at: {icon_path}")
+        
     window = GasSensingDashboard()
     window.show()
     sys.exit(app.exec())

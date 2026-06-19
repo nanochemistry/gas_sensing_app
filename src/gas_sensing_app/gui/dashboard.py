@@ -29,6 +29,10 @@ from PyQt6.QtGui import QFontDatabase, QIcon
 from PyQt6.QtCore import Qt, QTimer
 import pyqtgraph as pg
 
+# Force pyqtgraph to adopt seamless dark mode variables
+pg.setConfigOption('background', '#121212') # Deep chart background
+pg.setConfigOption('foreground', '#e0e0e0') # Light axes lines and labels
+
 # Core imports
 from gas_sensing_app.core.logger import WriteStream
 from gas_sensing_app.core.worker import ExperimentWorker
@@ -39,11 +43,23 @@ from gas_sensing_app.core.worker import ExperimentWorker
 class GasSensingDashboard(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Gas Sensing Dashboard 2026")
-        self.resize(1400, 850) 
+        self.setWindowTitle("Gas Sensing Dashboard")
+        self.resize(1400, 850)
         
-        self.setWindowIcon(QIcon("assets/sensor_icon.png")) # icon path (ensure you have an appropriate icon file in the assets folder)
+        # Resolve path to the assets directory cleanly
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        qss_path = os.path.join(current_dir, "..", "assets", "dark.qss")
+        icon_path = os.path.join(current_dir, "..", "assets", "icon.png")
         
+        # Load and apply the stylesheet dynamically
+        if os.path.exists(qss_path):
+            with open(qss_path, "r") as f:
+                self.setStyleSheet(f.read()) # This safely applies the stylesheet string directly
+
+        # Load the window icon properly
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+
         self.system_mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont).family() # Programmatically get 'Consolas' on Win, 'Menlo' on Mac, 'DejaVu' on Linux
         
         self.config_path = "config.yaml" 
@@ -65,25 +81,26 @@ class GasSensingDashboard(QMainWindow):
         left_frame.setFrameShape(QFrame.Shape.StyledPanel)
         left_frame.setLayout(left_panel)
 
-        self.status_label = QLabel("Status: Idle / Ready")
-        self.status_label.setStyleSheet("font-weight: bold; color: #34495e; padding: 5px; font-size: 13px;")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
+# REPLACED OLD LIGHT STYLES WITH HIGH-CONTRAST LABELS:
+        self.status_label = QLabel("Status: Idle / Ready") 
+        self.status_label.setStyleSheet("font-weight: bold; color: #f1c40f; padding: 5px; font-size: 13px;") # High-vis gold status text
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter) 
+
         res_indicator_layout = QVBoxLayout()
         res_indicator_layout.addWidget(QLabel("Current Resistance:"))
-        self.res_display = QLabel("--- Ω")
         
-        # Resistance Display
-        self.res_display.setStyleSheet(f"""font-size: 32px;
-                                       font-family: '{self.system_mono}';
-                                       color: #2c3e50;
-                                       border: 2px solid #bdc3c7;
-                                       padding: 10px;
-                                       background: white;""")
-
+        self.res_display = QLabel("--- Ω") # Resistance Display 
+        self.res_display.setStyleSheet(f"""
+            font-size: 32px; 
+            font-family: '{self.system_mono}'; 
+            color: #00ffcc; 
+            border: 2px solid #3a3a3a; 
+            padding: 10px; 
+            background: #111111;
+        """) # Modern Matrix-style neon cyan readout box over absolute black
         self.res_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         res_indicator_layout.addWidget(self.res_display)
-
+        
         # TAB LAYOUT CONTROLS
         self.control_tabs = QTabWidget()
         
