@@ -4,11 +4,11 @@ import time
 from pymeasure.instruments.proterial import ROD4
 
 class AeraMFCManager:
-    def __init__(self, port='ASRL/dev/cu.usbserial-130::INSTR', ranges=None):
+    def __init__(self, port='ASRL/dev/cu.usbserial-130::INSTR', ranges=None, accuracies=None):
         """
-        :param port: The PyVISA ressource name
-        :param ranges: Dictionary mapping channel index to max sccm, 
-                       e.g., {1: 1000, 2: 1000, 3: 200, 4: 200}
+        :param port: The PyVISA resource name
+        :param ranges: Dictionary mapping channel index to max sccm
+        :param accuracies: Dictionary mapping channel index to a 0-1 accuracy fraction
         """
         try:
             self.rod4 = ROD4(port)
@@ -16,12 +16,11 @@ class AeraMFCManager:
             print(f"Error connecting to ROD-4: {e}")
             raise
 
-        # Default ranges if none provided
         self.ranges = ranges or {1: 1000, 2: 1000, 3: 200, 4: 200}
+        self.accuracies = accuracies or {}
         self._initialize_channels()
 
     def _initialize_channels(self):
-        """One-time setup for the ROD-4 unit."""
         print("Initializing Aera ROD-4 Channels...")
         for ch_idx, max_range in self.ranges.items():
             channel = getattr(self.rod4, f"ch_{ch_idx}")
@@ -31,54 +30,52 @@ class AeraMFCManager:
         print("MFCs Ready.")
 
     def set_flow(self, channel_idx, sccm):
-        """Sets the flow rate in sccm for a specific channel."""
+        """Sets the flow rate in sccm with comprehensive validation safeguards."""
         if channel_idx not in self.ranges:
             print(f"Error: Channel {channel_idx} not configured.")
             return
 
-        max_val = self.ranges[channel_idx]
-        if sccm > max_val:
-            print(f"Warning: {sccm} sccm exceeds max range ({max_val}) for Ch {channel_idx}. Clamping.")
-            sccm = max_val
+        # 1. Negative numbers are explicitly ignored
+        if sccm < 0:
+            print(f"[INFO]: Negative flow setpoint ({sccm} sccm) ignored on Ch {channel_idx}.")
+            return
 
+        max_val = self.ranges[channel_idx]
+
+        # 2. Maximum range check: show an error in the log and do NOT coerce the value
+        if sccm > max_val:
+            print(f"Error: Specified flow {sccm} sccm exceeds maximum capacity ({max_val} sccm) for Ch {channel_idx}. Command Rejected.")
+            return
+
+        # 3. Accuracy warning boundary check (0-1 fraction from configuration matching range layout)
+        acc_fraction = 0.0
+        if isinstance(self.accuracies, dict):
+            acc_fraction = self.accuracies.get(channel_idx, 0.0)
+        elif isinstance(self.accuracies, (int, float)):
+            acc_fraction = float(self.accuracies)
+
+        accuracy_threshold = acc_fraction * max_val
+        if 0 < sccm < accuracy_threshold:
+            print(f"Warning: Setpoint {sccm} sccm is below the recommended physical accuracy limit ({accuracy_threshold} sccm) for Ch {channel_idx}.")
+
+        # Send command safely to the hardware
         channel = getattr(self.rod4, f"ch_{channel_idx}")
         channel.setpoint = sccm / max_val * 100  # Normalize to 0-100% scale 
         print(f"Channel {channel_idx} set to {sccm} sccm.")
 
     def get_actual_flow(self, channel_idx):
-        """Reads the current real-time flow from the MFC."""
         channel = getattr(self.rod4, f"ch_{channel_idx}")
         return channel.actual_flow
 
     def stop_all(self):
-        """Sets all flows to 0 sccm."""
         for i in self.ranges.keys():
             channel = getattr(self.rod4, f"ch_{i}")
             channel.setpoint = 0
         print("All MFC flows set to 0.")
 
     def close(self):
-        """Ensures flows are zeroed before shutting down the connection."""
         print("Shutting down AeraMFCManager...")
         self.stop_all()
-        # Brief pause to ensure commands are processed before port closes
         time.sleep(0.5) 
         self.rod4.shutdown()
         print("Connection closed.")
-
-
-# --- Manual Test ---
-if __name__ == "__main__":
-    mfc_configs = {1: 1000, 2: 1000, 3: 200, 4: 200}
-    mfc = AeraMFCManager(port='/dev/cu.usbserial-130', ranges=mfc_configs)
-    
-    try:
-        # set flow on channel 2 to 432 sccm and read back the actual flow
-        mfc.set_flow(2, 432.0) 
-        # wait a bit for the flow to stabilize before reading
-        time.sleep(10)
-        # read the actual flow from channel 2
-        print(f"Ch 2 Flow: {mfc.get_actual_flow(2)} sccm")
-    finally:
-        # Putting close in a finally block ensures 0 sccm even if the test fails
-        mfc.close()

@@ -42,16 +42,40 @@ class MockShutterController:
 
 
 class MockAeraMFCManager:
-    def __init__(self, port, ranges):
+    def __init__(self, port, ranges, accuracies=None):
         print(f"[MOCK] MFC Manager active on {port} with channel ceilings {ranges}")
+        self.ranges = ranges or {1: 1000, 2: 1000, 3: 200, 4: 200}
+        self.accuracies = accuracies or {}
         self.current_flows = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
 
     def set_flow(self, ch: int, flow: float):
+        if ch not in self.ranges:
+            print(f"[MOCK Error]: Channel {ch} not configured.")
+            return
+
+        if flow < 0:
+            print(f"[MOCK INFO]: Negative flow setpoint ({flow} sccm) ignored on Ch {ch}.")
+            return
+
+        max_val = self.ranges[ch]
+        if flow > max_val:
+            print(f"[MOCK Error]: Specified flow {flow} sccm exceeds maximum capacity ({max_val} sccm) for Ch {ch}. Command Rejected.")
+            return
+
+        acc_fraction = 0.0
+        if isinstance(self.accuracies, dict):
+            acc_fraction = self.accuracies.get(ch, 0.0)
+        elif isinstance(self.accuracies, (int, float)):
+            acc_fraction = float(self.accuracies)
+
+        accuracy_threshold = acc_fraction * max_val
+        if 0 < flow < accuracy_threshold:
+            print(f"[MOCK Warning]: Setpoint {flow} sccm is below the recommended physical accuracy limit ({accuracy_threshold} sccm) for Ch {ch}.")
+
         self.current_flows[ch] = float(flow)
         print(f"[MOCK] MFC Ch {ch} physical valve adjusted to {flow} sccm")
 
     def get_actual_flow(self, ch: int) -> float:
-        """Simulates natural gas flow turbulence around the target setpoint."""
         target = self.current_flows.get(ch, 0.0)
         if target == 0.0:
             return 0.0
@@ -63,3 +87,4 @@ class MockAeraMFCManager:
 
     def close(self):
         print("[MOCK] MFC controller connection closed.")
+        
