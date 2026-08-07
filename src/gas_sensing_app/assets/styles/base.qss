@@ -1,3 +1,35 @@
+*[textColor="primary"] {
+  color: #3498db;
+}
+
+*[textColor="secondary"] {
+  color: #95a5a6;
+}
+
+*[textColor="success"] {
+  color: #27ae60;
+}
+
+*[textColor="info"] {
+  color: #00bcd4;
+}
+
+*[textColor="warning"] {
+  color: #f1c40f;
+}
+
+*[textColor="danger"] {
+  color: #e74c3c;
+}
+
+*[fontWeight="bold"] {
+  font-weight: bold;
+}
+
+*[fontWeight="normal"] {
+  font-weight: normal;
+}
+
 QTabBar::tab {
   padding: 8px 16px;
   border-bottom: none;
@@ -21,4 +53,62 @@ QGroupBox::title {
 QSpinBox {
   padding: 5px;
   border-radius: 4px;
+}
+
+QLabel#statusLabel {
+  font-weight: bold;
+  padding: 5px;
+  font-size: 13px;
+}
+
+QLabel#resistanceLabel {
+  font-size: 32px;
+  padding: 10px;
+}
+
+QPushButton#loadRecipeButton {
+  height: 35px;
+}
+
+QPushButton#runRecipeButton {
+  background-color: #27ae60;
+  color: white;
+  font-weight: bold;
+  height: 45px;
+}
+
+QPushButton#manualSessionButton {
+  background-color: #2980b9;
+  color: white;
+  font-weight: bold;
+  height: 35px;
+}
+
+QPushButton#openShutterCheckBox {
+  font-weight: bold;
+}
+
+QPushButton#manualSessionButton {
+  background-color: #8e44ad;
+  color: white;
+  font-weight: bold;
+  height: 35px;
+}
+
+QPushButton#stopButton {
+  background-color: #c0392b;
+  color: white;
+  font-weight: bold;
+  height: 40px;
+}
+
+QTextEdit#consoleLogText {
+  background-color: #1e1e1e;
+  color: #64e314;
+  font-size: 11px;
+}
+
+QCheckBox[plotCheckBox="true"] {
+  font-weight: bold;
+  margin-right: 15px;
 }

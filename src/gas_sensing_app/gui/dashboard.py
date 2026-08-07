@@ -58,7 +58,9 @@ class GasSensingDashboard(QMainWindow):
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(str(icon_path)))
 
-        self.system_mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont).family() # Programmatically get 'Consolas' on Win, 'Menlo' on Mac, 'DejaVu' on Linux
+        self.system_mono = QFontDatabase.systemFont(
+                                QFontDatabase.SystemFont.FixedFont
+                            )
         
         self.config_path = "config.yaml" 
         self.recipe_path = None
@@ -81,21 +83,18 @@ class GasSensingDashboard(QMainWindow):
 
 # REPLACED OLD LIGHT STYLES WITH HIGH-CONTRAST LABELS:
         self.status_label = QLabel("Status: Idle / Ready") 
-        self.status_label.setStyleSheet("font-weight: bold; color: #f1c40f; padding: 5px; font-size: 13px;") # High-vis gold status text
+        self.status_label.setObjectName("statusLabel")            
+        self.status_label.setProperty("textColor", "primary")
+        self.status_label.setProperty("fontWeight", "normal")
+        self.refresh_style(self.status_label)
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter) 
 
         res_indicator_layout = QVBoxLayout()
         res_indicator_layout.addWidget(QLabel("Current Resistance:"))
         
         self.res_display = QLabel("--- Ω") # Resistance Display 
-        self.res_display.setStyleSheet(f"""
-            font-size: 32px; 
-            font-family: '{self.system_mono}'; 
-            color: #00ffcc; 
-            border: 2px solid #3a3a3a; 
-            padding: 10px; 
-            background: #111111;
-        """) # Modern Matrix-style neon cyan readout box over absolute black
+        self.res_display.setObjectName("resistanceLabel")
+        self.res_display.setFont(self.system_mono)
         self.res_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         res_indicator_layout.addWidget(self.res_display)
         
@@ -106,10 +105,10 @@ class GasSensingDashboard(QMainWindow):
         recipe_tab = QWidget()
         recipe_layout = QVBoxLayout(recipe_tab)
         self.load_recipe_btn = QPushButton("Load YAML Recipe...")
-        self.load_recipe_btn.setStyleSheet("height: 35px;")
+        self.load_recipe_btn.setObjectName("loadRecipeButton")
         self.load_recipe_btn.clicked.connect(self.select_recipe)
         self.start_recipe_btn = QPushButton("RUN RECIPE")
-        self.start_recipe_btn.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; height: 45px;")
+        self.start_recipe_btn.setObjectName("runRecipeButton")
         self.start_recipe_btn.setEnabled(False) 
         self.start_recipe_btn.clicked.connect(self.start_recipe_mode)
         recipe_layout.addWidget(QLabel("Recipe Automation Controls:"))
@@ -122,7 +121,7 @@ class GasSensingDashboard(QMainWindow):
         manual_tab = QWidget()
         manual_layout = QVBoxLayout(manual_tab)
         self.start_manual_btn = QPushButton("START MANUAL SESSION")
-        self.start_manual_btn.setStyleSheet("background-color: #2980b9; color: white; font-weight: bold; height: 35px;")
+        self.start_manual_btn.setObjectName("manualSessionButton")
         self.start_manual_btn.clicked.connect(self.start_manual_mode)
 
         input_group = QGroupBox("Manual Target Adjustments")
@@ -140,11 +139,11 @@ class GasSensingDashboard(QMainWindow):
         # CHANGED: Replaced the angular numeric QSpinBox with a clean operational checkbox
         grid.addWidget(QLabel("Shutter Control:"), 4, 0)
         self.shutter_checkbox = QCheckBox("Open Shutter")
-        self.shutter_checkbox.setStyleSheet("font-weight: bold;")
+        self.shutter_checkbox.setObjectName("openShutterCheckBox")
         grid.addWidget(self.shutter_checkbox, 4, 1)
 
         self.apply_manual_btn = QPushButton("Apply Setpoint Changes")
-        self.apply_manual_btn.setStyleSheet("background-color: #8e44ad; color: white; font-weight: bold; height: 35px;")
+        self.apply_manual_btn.setObjectName("applySetpointButton")
         self.apply_manual_btn.setEnabled(False)
         self.apply_manual_btn.clicked.connect(self.apply_manual_changes)
 
@@ -154,7 +153,7 @@ class GasSensingDashboard(QMainWindow):
         manual_layout.addStretch()
 
         self.stop_btn = QPushButton("STOP ENGINE (Emergency)")
-        self.stop_btn.setStyleSheet("background-color: #c0392b; color: white; font-weight: bold; height: 40px;")
+        self.stop_btn.setObjectName("stopButton")
         self.stop_btn.setEnabled(False)
         self.stop_btn.clicked.connect(self.stop_experiment)
 
@@ -165,12 +164,8 @@ class GasSensingDashboard(QMainWindow):
         self.console_display = QTextEdit()
         self.console_display.setReadOnly(True)
         
-        self.console_display.setStyleSheet(
-            f"""background-color: #1e1e1e;
-            color: #64e314; 
-            font-family: '{self.system_mono}';
-            font-size: 11px;
-            """)        
+        self.console_display.setObjectName("consoleLogText")
+        self.console_display.setFont(self.system_mono)
         console_layout.addWidget(self.console_display)
 
         self.control_tabs.addTab(recipe_tab, "Automated Recipe")
@@ -234,7 +229,9 @@ class GasSensingDashboard(QMainWindow):
         ]
         for name, color, plot_item in items_to_toggle:
             cb = QCheckBox(name); cb.setChecked(True)
-            cb.setStyleSheet(f"QCheckBox {{ color: {color}; font-weight: bold; margin-right: 15px; }}")
+            cb.setProperty("plotCheckBox", True)
+            cb.setStyleSheet(f"color: {color};")
+            self.refresh_style(cb)
             cb.stateChanged.connect(lambda state, item=plot_item: item.setVisible(bool(state)))
             legend_layout.addWidget(cb)
             
@@ -283,7 +280,9 @@ class GasSensingDashboard(QMainWindow):
         if file:
             self.recipe_path = file
             self.status_label.setText(f"Loaded: {os.path.basename(file)}")
-            self.status_label.setStyleSheet("font-weight: bold; color: #27ae60;")
+            self.status_label.setProperty("textColor", "success")
+            self.status_label.setProperty("fontWeight", "bold")
+            self.refresh_style(self.status_label)
             self.start_recipe_btn.setEnabled(True)
 
     def prepare_data_arrays(self):
@@ -438,3 +437,7 @@ class GasSensingDashboard(QMainWindow):
                 }
                 with open(self.recipe_path, 'w') as f:
                     yaml.dump(fallback_recipe, f)
+                    
+    def refresh_style(self,widget):
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)

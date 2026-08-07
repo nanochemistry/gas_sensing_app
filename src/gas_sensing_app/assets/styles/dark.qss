@@ -48,3 +48,9 @@ QCheckBox {
   color: #e0e0e0;
   background-color: transparent;
 }
+
+QLabel#resistanceLabel {
+  color: #00ffcc;
+  border: 2px solid #3a3a3a;
+  background: #111111;
+}
