@@ -24,7 +24,8 @@ from PyQt6.QtWidgets import (QMainWindow,
                              QGroupBox, 
                              QGridLayout, 
                              QFrame, 
-                             QSplitter)
+                             QSplitter,
+                             QComboBox)
 
 from PyQt6.QtGui import QFontDatabase, QIcon
 from PyQt6.QtCore import Qt, QTimer
@@ -35,7 +36,10 @@ from gas_sensing_app.core.logger import WriteStream
 from gas_sensing_app.core.worker import ExperimentWorker
 
 # Style imports
-from gas_sensing_app.gui.styles import load_theme
+from gas_sensing_app.gui.styles import (load_theme,
+                                        update_plot_theme,
+                                        DEFAULT_THEME,
+                                        Theme)
 
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
 
@@ -52,7 +56,7 @@ class GasSensingDashboard(QMainWindow):
         icon_path = ASSETS_DIR / "icon.png"
         
         # Load and apply the stylesheet dynamically
-        self.setStyleSheet(load_theme())
+        self.setStyleSheet(load_theme(DEFAULT_THEME))
 
         # Load the window icon properly
         if os.path.exists(icon_path):
@@ -80,6 +84,18 @@ class GasSensingDashboard(QMainWindow):
         left_frame = QFrame()
         left_frame.setFrameShape(QFrame.Shape.StyledPanel)
         left_frame.setLayout(left_panel)
+        
+        theme_selector_layout = QVBoxLayout()
+        theme_selector_layout.addWidget(QLabel("Change the theme:"))
+        
+        self.theme_selector = QComboBox()
+        for theme in Theme:
+            self.theme_selector.addItem(theme.value.capitalize(), theme)
+        self.theme_selector.setObjectName("themeSelectorComboBox")
+        self.theme_selector.currentIndexChanged.connect(
+            self.change_theme
+        )
+        theme_selector_layout.addWidget(self.theme_selector)
 
 # REPLACED OLD LIGHT STYLES WITH HIGH-CONTRAST LABELS:
         self.status_label = QLabel("Status: Idle / Ready") 
@@ -177,12 +193,16 @@ class GasSensingDashboard(QMainWindow):
         left_panel.addWidget(self.control_tabs)
         left_panel.addWidget(self.stop_btn)
         left_panel.addSpacing(10)
-        left_panel.addLayout(console_layout, stretch=1)
+        left_panel.addLayout(console_layout, stretch=1)        
+        left_panel.addLayout(theme_selector_layout)
 
         # RIGHT PANEL: GRAPH MATRIX
         graph_splitter = QSplitter(Qt.Orientation.Vertical)
         
-        self.res_plot = pg.PlotWidget(title="1. Sensor Resistance Data Loop (R vs. t)")
+
+        self.res_plot = pg.PlotWidget()
+        self.res_plot.setProperty("title", "1. Sensor Resistance Data Loop (R vs. t)")
+        self.res_plot.setTitle(self.res_plot.property("title"))
         self.res_plot.showGrid(x=True, y=True)
         self.res_curve = self.res_plot.plot(pen=pg.mkPen(color='#3498db', width=2))
         self.res_plot.getAxis('bottom').setStyle(showValues=False)
@@ -192,7 +212,9 @@ class GasSensingDashboard(QMainWindow):
         mfc_box_layout = QVBoxLayout(mfc_container)
         mfc_box_layout.setContentsMargins(0,0,0,0)
 
-        self.mfc_plot = pg.PlotWidget(title="2. MFC Gas Flows & Shutter Profiles")
+        self.mfc_plot = pg.PlotWidget()
+        self.mfc_plot.setProperty("title", "2. MFC Gas Flows & Shutter Profiles")
+        self.mfc_plot.setTitle(self.mfc_plot.property("title"))
         self.mfc_plot.showGrid(x=True, y=True)
         self.mfc_plot.setLabel('left', 'Gas Flow', units='sccm')
         self.mfc_plot.setLabel('bottom', 'Elapsed Time', units='s')
@@ -441,3 +463,11 @@ class GasSensingDashboard(QMainWindow):
     def refresh_style(self,widget):
         widget.style().unpolish(widget)
         widget.style().polish(widget)
+        
+    def change_theme(self,index):
+        theme = self.theme_selector.itemData(index)
+        self.setStyleSheet(
+            load_theme(theme)
+        )
+        update_plot_theme(self.mfc_plot, theme)
+        update_plot_theme(self.res_plot, theme)

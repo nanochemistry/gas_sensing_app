@@ -51,9 +51,83 @@ QGroupBox::title {
 }
 
 QSpinBox {
-  padding: 5px;
-  border-radius: 4px;
+  border-radius: 5px;
+  padding: 5px 35px 5px 10px;
+  min-height: 24px;
 }
+
+QSpinBox::up-button,
+QSpinBox::down-button {
+  width: 22px;
+}
+
+QSpinBox::up-button {
+  border-top-right-radius: 5px;
+}
+
+QSpinBox::down-button {
+  border-bottom-right-radius: 5px;
+}
+
+QSpinBox::up-arrow {
+  image: url("@SPINBOX_UP@");
+  width: 10px;
+  height: 6px;
+}
+
+QSpinBox::down-arrow {
+  image: url("@SPINBOX_DOWN@");
+  width: 10px;
+  height: 6px;
+}
+
+QComboBox {
+  border-radius: 5px;
+  padding: 5px 10px;
+  padding-right: 30px;
+}
+
+QComboBox::drop-down {
+  width: 28px;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+QComboBox::down-arrow {
+  image: url("@COMBOBOX_ARROW@");
+  width: 12px;
+  height: 8px;
+}
+
+QComboBox QAbstractItemView {
+  border-radius: 4px;
+  padding: 2px;
+}
+
+QComboBox QAbstractItemView::item {
+  padding: 6px 10px;
+}
+
+QCheckBox {
+  spacing: 8px;
+}
+
+QCheckBox::indicator {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+QCheckBox::indicator:checked {
+  image: url("@CHECK_ICON@");
+}
+
+QPushButton {
+  font-weight: bold;
+  height: 35px;
+}
+
+/* Named components */
 
 QLabel#statusLabel {
   font-weight: bold;
@@ -66,45 +140,19 @@ QLabel#resistanceLabel {
   padding: 10px;
 }
 
-QPushButton#loadRecipeButton {
-  height: 35px;
-}
-
 QPushButton#runRecipeButton {
-  background-color: #27ae60;
-  color: white;
-  font-weight: bold;
   height: 45px;
 }
 
-QPushButton#manualSessionButton {
-  background-color: #2980b9;
-  color: white;
+QCheckBox#openShutterCheckBox {
   font-weight: bold;
-  height: 35px;
-}
-
-QPushButton#openShutterCheckBox {
-  font-weight: bold;
-}
-
-QPushButton#manualSessionButton {
-  background-color: #8e44ad;
-  color: white;
-  font-weight: bold;
-  height: 35px;
 }
 
 QPushButton#stopButton {
-  background-color: #c0392b;
-  color: white;
-  font-weight: bold;
   height: 40px;
 }
 
 QTextEdit#consoleLogText {
-  background-color: #1e1e1e;
-  color: #64e314;
   font-size: 11px;
 }
 
