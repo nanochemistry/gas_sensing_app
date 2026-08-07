@@ -11,8 +11,9 @@ __pycache__/
 .vscode/
 .DS_Store
 
-# Ignore build folder
+# Ignore build generated folders
 build/
+dist/
 
 # Ignore all generated lab files and active directories
 data/
