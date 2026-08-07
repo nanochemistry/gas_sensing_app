@@ -9,6 +9,7 @@ import queue
 import shutil
 from pathlib import Path
 
+# Qt imports
 from PyQt6.QtWidgets import (QMainWindow, 
                              QWidget, 
                              QVBoxLayout,
@@ -28,15 +29,13 @@ from PyQt6.QtWidgets import (QMainWindow,
 from PyQt6.QtGui import QFontDatabase, QIcon
 from PyQt6.QtCore import Qt, QTimer
 import pyqtgraph as pg
-from gas_sensing_app.gui.styles import load_theme
-
-# Force pyqtgraph to adopt seamless dark mode variables
-pg.setConfigOption('background', '#121212') # Deep chart background
-pg.setConfigOption('foreground', '#e0e0e0') # Light axes lines and labels
 
 # Core imports
 from gas_sensing_app.core.logger import WriteStream
 from gas_sensing_app.core.worker import ExperimentWorker
+
+# Style imports
+from gas_sensing_app.gui.styles import load_theme
 
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
 

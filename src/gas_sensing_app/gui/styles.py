@@ -1,7 +1,17 @@
 from pathlib import Path
+import importlib
+import pyqtgraph as pg
 
 STYLE_DIR = Path(__file__).parent.parent / "assets" / "styles"
 DEFAULT_THEME = "dark"
+
+def apply_pyqtgraph_theme(theme):
+    module = importlib.import_module(
+        f"gas_sensing_app.themes.{theme}"
+    )
+
+    for key, value in module.PYQTGRAPH_CONFIG.items():
+        pg.setConfigOption(key, value)
 
 def load_theme(theme: str = DEFAULT_THEME) -> str:
     files = [
