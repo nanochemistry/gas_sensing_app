@@ -2,6 +2,8 @@
 # Copy this file to the root directory as 'config.yaml' to modify live settings.
 
 hardware:
+  use_mock: true # Set to false to connect to actual instruments
+
   keithley_2400:
     port: "COM3" # Update with actual system COM port (e.g., COM3 or /dev/ttyUSB0)
     auto_range: false
