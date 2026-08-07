@@ -18,6 +18,7 @@ dist/
 # Ignore all generated lab files and active directories
 data/
 logs/
+console_logs/
 recipes/
 
 # Ignore local physical hardware execution configurations
