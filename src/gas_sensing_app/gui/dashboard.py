@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (QMainWindow,
 from PyQt6.QtGui import QFontDatabase, QIcon
 from PyQt6.QtCore import Qt, QTimer
 import pyqtgraph as pg
+from gas_sensing_app.gui.styles import load_theme
 
 # Force pyqtgraph to adopt seamless dark mode variables
 pg.setConfigOption('background', '#121212') # Deep chart background
@@ -49,14 +50,10 @@ class GasSensingDashboard(QMainWindow):
         self.resize(1400, 850)
         
         # Resolve path to the assets directory cleanly
-        qss_path =  ASSETS_DIR / "dark.qss"
         icon_path = ASSETS_DIR / "icon.png"
-        print(ASSETS_DIR)
         
         # Load and apply the stylesheet dynamically
-        if os.path.exists(qss_path):
-            with open(qss_path, "r") as f:
-                self.setStyleSheet(f.read()) # This safely applies the stylesheet string directly
+        self.setStyleSheet(load_theme())
 
         # Load the window icon properly
         if os.path.exists(icon_path):

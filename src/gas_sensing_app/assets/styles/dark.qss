@@ -1,0 +1,50 @@
+QMainWindow {
+  background-color: #121212;
+}
+
+QWidget {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+QFrame {
+  background-color: #1e1e1e;
+  border: 1px solid #2d2d2d;
+}
+
+QTabWidget::pane {
+  border: 1px solid #333333;
+  background-color: #1e1e1e;
+}
+
+QTabBar::tab {
+  background-color: #2d2d2d;
+  color: #b1b1b1;
+  border: 1px solid #333333;
+}
+
+QTabBar::tab:selected {
+  background-color: #1e1e1e;
+  color: #ffffff;
+  border-bottom: 2px solid #3498db;
+}
+
+QGroupBox {
+  border: 1px solid #3a3a3a;
+}
+
+QSpinBox {
+  background-color: #2d2d2d;
+  color: #ffffff;
+  border: 1px solid #444444;
+}
+
+QLabel {
+  background-color: transparent;
+  color: #e0e0e0;
+}
+
+QCheckBox {
+  color: #e0e0e0;
+  background-color: transparent;
+}
