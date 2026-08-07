@@ -37,6 +37,8 @@ pg.setConfigOption('foreground', '#e0e0e0') # Light axes lines and labels
 from gas_sensing_app.core.logger import WriteStream
 from gas_sensing_app.core.worker import ExperimentWorker
 
+ASSETS_DIR = Path(__file__).parent.parent / "assets"
+
 # ==============================================================================
 # MAIN GUI WINDOW
 # ==============================================================================
@@ -47,9 +49,9 @@ class GasSensingDashboard(QMainWindow):
         self.resize(1400, 850)
         
         # Resolve path to the assets directory cleanly
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        qss_path = os.path.join(current_dir, "..", "assets", "dark.qss")
-        icon_path = os.path.join(current_dir, "..", "assets", "icon.png")
+        qss_path =  ASSETS_DIR / "dark.qss"
+        icon_path = ASSETS_DIR / "icon.png"
+        print(ASSETS_DIR)
         
         # Load and apply the stylesheet dynamically
         if os.path.exists(qss_path):
@@ -58,7 +60,7 @@ class GasSensingDashboard(QMainWindow):
 
         # Load the window icon properly
         if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
+            self.setWindowIcon(QIcon(str(icon_path)))
 
         self.system_mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont).family() # Programmatically get 'Consolas' on Win, 'Menlo' on Mac, 'DejaVu' on Linux
         
@@ -379,9 +381,9 @@ class GasSensingDashboard(QMainWindow):
         Ensures the local lab computer runtime workspace folders and files exist.
         Copies raw templates from the assets folder to preserve structural comments.
         """
-        # Define paths cleanly using pathlib
-        template_config = Path("assets/config.template.yaml")
-        template_recipe = Path("assets/recipe.template.yaml")
+        # Define template files paths
+        template_config = ASSETS_DIR / "config.template.yaml"
+        template_recipe = ASSETS_DIR / "recipe.template.yaml"
         
         # 1. Check and copy live config.yaml fallback
         if not os.path.exists(self.config_path):
@@ -393,6 +395,7 @@ class GasSensingDashboard(QMainWindow):
                 print("[Critical Warning] 'assets/config.template.yaml' not found! Falling back to safe hardcoded defaults.")
                 fallback_config = {
                     'hardware': {
+                        'use_mock': True,
                         'keithley_2400': {'port': 'MOCK_PORT', 'auto_range': False, 'manual_range': 200000, 'four_wire': True},
                         'shutter': {'port': 'MOCK_SHUTTER', 'baud_rate': 115200, 'open_angle': 90, 'closed_angle': 0},
                         'mfc_controller': {'port': 'MOCK_MFC', 'range_sccm': {1: 1000, 2: 1000, 3: 200, 4: 200}}
