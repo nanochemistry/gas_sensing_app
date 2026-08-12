@@ -10,10 +10,16 @@ __pycache__/
 *.egg-info/
 .vscode/
 .DS_Store
+.prettierrc
+
+# Ignore build generated folders
+build/
+dist/
 
 # Ignore all generated lab files and active directories
 data/
 logs/
+console_logs/
 recipes/
 
 # Ignore local physical hardware execution configurations

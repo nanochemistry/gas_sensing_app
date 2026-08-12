@@ -9,6 +9,7 @@ import queue
 import shutil
 from pathlib import Path
 
+# Qt imports
 from PyQt6.QtWidgets import (QMainWindow, 
                              QWidget, 
                              QVBoxLayout,
@@ -23,19 +24,24 @@ from PyQt6.QtWidgets import (QMainWindow,
                              QGroupBox, 
                              QGridLayout, 
                              QFrame, 
-                             QSplitter)
+                             QSplitter,
+                             QComboBox)
 
 from PyQt6.QtGui import QFontDatabase, QIcon
 from PyQt6.QtCore import Qt, QTimer
 import pyqtgraph as pg
 
-# Force pyqtgraph to adopt seamless dark mode variables
-pg.setConfigOption('background', '#121212') # Deep chart background
-pg.setConfigOption('foreground', '#e0e0e0') # Light axes lines and labels
-
 # Core imports
 from gas_sensing_app.core.logger import WriteStream
 from gas_sensing_app.core.worker import ExperimentWorker
+
+# Style imports
+from gas_sensing_app.gui.styles import (load_theme,
+                                        update_plot_theme,
+                                        DEFAULT_THEME,
+                                        Theme)
+
+ASSETS_DIR = Path(__file__).parent.parent / "assets"
 
 # ==============================================================================
 # MAIN GUI WINDOW
@@ -47,20 +53,18 @@ class GasSensingDashboard(QMainWindow):
         self.resize(1400, 850)
         
         # Resolve path to the assets directory cleanly
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        qss_path = os.path.join(current_dir, "..", "assets", "dark.qss")
-        icon_path = os.path.join(current_dir, "..", "assets", "icon.png")
+        icon_path = ASSETS_DIR / "icon.png"
         
         # Load and apply the stylesheet dynamically
-        if os.path.exists(qss_path):
-            with open(qss_path, "r") as f:
-                self.setStyleSheet(f.read()) # This safely applies the stylesheet string directly
+        self.setStyleSheet(load_theme(DEFAULT_THEME))
 
         # Load the window icon properly
         if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
+            self.setWindowIcon(QIcon(str(icon_path)))
 
-        self.system_mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont).family() # Programmatically get 'Consolas' on Win, 'Menlo' on Mac, 'DejaVu' on Linux
+        self.system_mono = QFontDatabase.systemFont(
+                                QFontDatabase.SystemFont.FixedFont
+                            )
         
         self.config_path = "config.yaml" 
         self.recipe_path = None
@@ -80,24 +84,33 @@ class GasSensingDashboard(QMainWindow):
         left_frame = QFrame()
         left_frame.setFrameShape(QFrame.Shape.StyledPanel)
         left_frame.setLayout(left_panel)
+        
+        theme_selector_layout = QVBoxLayout()
+        theme_selector_layout.addWidget(QLabel("Change the theme:"))
+        
+        self.theme_selector = QComboBox()
+        for theme in Theme:
+            self.theme_selector.addItem(theme.value.capitalize(), theme)
+        self.theme_selector.setObjectName("themeSelectorComboBox")
+        self.theme_selector.currentIndexChanged.connect(
+            self.change_theme
+        )
+        theme_selector_layout.addWidget(self.theme_selector)
 
 # REPLACED OLD LIGHT STYLES WITH HIGH-CONTRAST LABELS:
         self.status_label = QLabel("Status: Idle / Ready") 
-        self.status_label.setStyleSheet("font-weight: bold; color: #f1c40f; padding: 5px; font-size: 13px;") # High-vis gold status text
+        self.status_label.setObjectName("statusLabel")            
+        self.status_label.setProperty("textColor", "primary")
+        self.status_label.setProperty("fontWeight", "normal")
+        self.refresh_style(self.status_label)
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter) 
 
         res_indicator_layout = QVBoxLayout()
         res_indicator_layout.addWidget(QLabel("Current Resistance:"))
         
         self.res_display = QLabel("--- Ω") # Resistance Display 
-        self.res_display.setStyleSheet(f"""
-            font-size: 32px; 
-            font-family: '{self.system_mono}'; 
-            color: #00ffcc; 
-            border: 2px solid #3a3a3a; 
-            padding: 10px; 
-            background: #111111;
-        """) # Modern Matrix-style neon cyan readout box over absolute black
+        self.res_display.setObjectName("resistanceLabel")
+        self.res_display.setFont(self.system_mono)
         self.res_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         res_indicator_layout.addWidget(self.res_display)
         
@@ -108,10 +121,10 @@ class GasSensingDashboard(QMainWindow):
         recipe_tab = QWidget()
         recipe_layout = QVBoxLayout(recipe_tab)
         self.load_recipe_btn = QPushButton("Load YAML Recipe...")
-        self.load_recipe_btn.setStyleSheet("height: 35px;")
+        self.load_recipe_btn.setObjectName("loadRecipeButton")
         self.load_recipe_btn.clicked.connect(self.select_recipe)
         self.start_recipe_btn = QPushButton("RUN RECIPE")
-        self.start_recipe_btn.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; height: 45px;")
+        self.start_recipe_btn.setObjectName("runRecipeButton")
         self.start_recipe_btn.setEnabled(False) 
         self.start_recipe_btn.clicked.connect(self.start_recipe_mode)
         recipe_layout.addWidget(QLabel("Recipe Automation Controls:"))
@@ -124,7 +137,7 @@ class GasSensingDashboard(QMainWindow):
         manual_tab = QWidget()
         manual_layout = QVBoxLayout(manual_tab)
         self.start_manual_btn = QPushButton("START MANUAL SESSION")
-        self.start_manual_btn.setStyleSheet("background-color: #2980b9; color: white; font-weight: bold; height: 35px;")
+        self.start_manual_btn.setObjectName("manualSessionButton")
         self.start_manual_btn.clicked.connect(self.start_manual_mode)
 
         input_group = QGroupBox("Manual Target Adjustments")
@@ -142,11 +155,11 @@ class GasSensingDashboard(QMainWindow):
         # CHANGED: Replaced the angular numeric QSpinBox with a clean operational checkbox
         grid.addWidget(QLabel("Shutter Control:"), 4, 0)
         self.shutter_checkbox = QCheckBox("Open Shutter")
-        self.shutter_checkbox.setStyleSheet("font-weight: bold;")
+        self.shutter_checkbox.setObjectName("openShutterCheckBox")
         grid.addWidget(self.shutter_checkbox, 4, 1)
 
         self.apply_manual_btn = QPushButton("Apply Setpoint Changes")
-        self.apply_manual_btn.setStyleSheet("background-color: #8e44ad; color: white; font-weight: bold; height: 35px;")
+        self.apply_manual_btn.setObjectName("applySetpointButton")
         self.apply_manual_btn.setEnabled(False)
         self.apply_manual_btn.clicked.connect(self.apply_manual_changes)
 
@@ -156,7 +169,7 @@ class GasSensingDashboard(QMainWindow):
         manual_layout.addStretch()
 
         self.stop_btn = QPushButton("STOP ENGINE (Emergency)")
-        self.stop_btn.setStyleSheet("background-color: #c0392b; color: white; font-weight: bold; height: 40px;")
+        self.stop_btn.setObjectName("stopButton")
         self.stop_btn.setEnabled(False)
         self.stop_btn.clicked.connect(self.stop_experiment)
 
@@ -167,12 +180,8 @@ class GasSensingDashboard(QMainWindow):
         self.console_display = QTextEdit()
         self.console_display.setReadOnly(True)
         
-        self.console_display.setStyleSheet(
-            f"""background-color: #1e1e1e;
-            color: #64e314; 
-            font-family: '{self.system_mono}';
-            font-size: 11px;
-            """)        
+        self.console_display.setObjectName("consoleLogText")
+        self.console_display.setFont(self.system_mono)
         console_layout.addWidget(self.console_display)
 
         self.control_tabs.addTab(recipe_tab, "Automated Recipe")
@@ -184,12 +193,16 @@ class GasSensingDashboard(QMainWindow):
         left_panel.addWidget(self.control_tabs)
         left_panel.addWidget(self.stop_btn)
         left_panel.addSpacing(10)
-        left_panel.addLayout(console_layout, stretch=1)
+        left_panel.addLayout(console_layout, stretch=1)        
+        left_panel.addLayout(theme_selector_layout)
 
         # RIGHT PANEL: GRAPH MATRIX
         graph_splitter = QSplitter(Qt.Orientation.Vertical)
         
-        self.res_plot = pg.PlotWidget(title="1. Sensor Resistance Data Loop (R vs. t)")
+
+        self.res_plot = pg.PlotWidget()
+        self.res_plot.setProperty("title", "1. Sensor Resistance Data Loop (R vs. t)")
+        self.res_plot.setTitle(self.res_plot.property("title"))
         self.res_plot.showGrid(x=True, y=True)
         self.res_curve = self.res_plot.plot(pen=pg.mkPen(color='#3498db', width=2))
         self.res_plot.getAxis('bottom').setStyle(showValues=False)
@@ -199,7 +212,9 @@ class GasSensingDashboard(QMainWindow):
         mfc_box_layout = QVBoxLayout(mfc_container)
         mfc_box_layout.setContentsMargins(0,0,0,0)
 
-        self.mfc_plot = pg.PlotWidget(title="2. MFC Gas Flows & Shutter Profiles")
+        self.mfc_plot = pg.PlotWidget()
+        self.mfc_plot.setProperty("title", "2. MFC Gas Flows & Shutter Profiles")
+        self.mfc_plot.setTitle(self.mfc_plot.property("title"))
         self.mfc_plot.showGrid(x=True, y=True)
         self.mfc_plot.setLabel('left', 'Gas Flow', units='sccm')
         self.mfc_plot.setLabel('bottom', 'Elapsed Time', units='s')
@@ -236,7 +251,9 @@ class GasSensingDashboard(QMainWindow):
         ]
         for name, color, plot_item in items_to_toggle:
             cb = QCheckBox(name); cb.setChecked(True)
-            cb.setStyleSheet(f"QCheckBox {{ color: {color}; font-weight: bold; margin-right: 15px; }}")
+            cb.setProperty("plotCheckBox", True)
+            cb.setStyleSheet(f"color: {color};")
+            self.refresh_style(cb)
             cb.stateChanged.connect(lambda state, item=plot_item: item.setVisible(bool(state)))
             legend_layout.addWidget(cb)
             
@@ -285,7 +302,9 @@ class GasSensingDashboard(QMainWindow):
         if file:
             self.recipe_path = file
             self.status_label.setText(f"Loaded: {os.path.basename(file)}")
-            self.status_label.setStyleSheet("font-weight: bold; color: #27ae60;")
+            self.status_label.setProperty("textColor", "success")
+            self.status_label.setProperty("fontWeight", "bold")
+            self.refresh_style(self.status_label)
             self.start_recipe_btn.setEnabled(True)
 
     def prepare_data_arrays(self):
@@ -379,9 +398,9 @@ class GasSensingDashboard(QMainWindow):
         Ensures the local lab computer runtime workspace folders and files exist.
         Copies raw templates from the assets folder to preserve structural comments.
         """
-        # Define paths cleanly using pathlib
-        template_config = Path("assets/config.template.yaml")
-        template_recipe = Path("assets/recipe.template.yaml")
+        # Define template files paths
+        template_config = ASSETS_DIR / "config.template.yaml"
+        template_recipe = ASSETS_DIR / "recipe.template.yaml"
         
         # 1. Check and copy live config.yaml fallback
         if not os.path.exists(self.config_path):
@@ -393,6 +412,7 @@ class GasSensingDashboard(QMainWindow):
                 print("[Critical Warning] 'assets/config.template.yaml' not found! Falling back to safe hardcoded defaults.")
                 fallback_config = {
                     'hardware': {
+                        'use_mock': True,
                         'keithley_2400': {'port': 'MOCK_PORT', 'auto_range': False, 'manual_range': 200000, 'four_wire': True},
                         'shutter': {'port': 'MOCK_SHUTTER', 'baud_rate': 115200, 'open_angle': 90, 'closed_angle': 0},
                         'mfc_controller': {'port': 'MOCK_MFC', 'range_sccm': {1: 1000, 2: 1000, 3: 200, 4: 200}}
@@ -439,3 +459,15 @@ class GasSensingDashboard(QMainWindow):
                 }
                 with open(self.recipe_path, 'w') as f:
                     yaml.dump(fallback_recipe, f)
+                    
+    def refresh_style(self,widget):
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+        
+    def change_theme(self,index):
+        theme = self.theme_selector.itemData(index)
+        self.setStyleSheet(
+            load_theme(theme)
+        )
+        update_plot_theme(self.mfc_plot, theme)
+        update_plot_theme(self.res_plot, theme)
